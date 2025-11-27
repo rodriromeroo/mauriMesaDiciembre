@@ -4,40 +4,22 @@ namespace TarjetaSube
 {
     public class TarjetaFranquiciaCompleta : Tarjeta
     {
-        public TarjetaFranquiciaCompleta() : base()
-        {
-        }
+        public override decimal ObtenerMontoAPagar(decimal monto) => 0m;
 
-        public decimal CalcularDescuento(decimal monto)
-        {
-            return 0;
-        }
-
-        public bool PuedeViajarEnEsteHorario()
+        public override bool PuedeUsarseAhora()
         {
             DateTime ahora = DateTime.Now;
-            
-            // verifica si es lunes a viernes
             if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
-            {
                 return false;
-            }
-            
-            // verifica si esta entre las 6 y las 22
             if (ahora.Hour < 6 || ahora.Hour >= 22)
-            {
                 return false;
-            }
-            
             return true;
         }
 
         public override bool DescontarSaldo(decimal monto)
         {
             if (ObtenerSaldoPendiente() > 0)
-            {
                 AcreditarCarga();
-            }
             return true;
         }
     }
