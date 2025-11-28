@@ -1,4 +1,5 @@
 ﻿using System;
+using System;
 
 namespace TarjetaSube
 {
@@ -21,12 +22,11 @@ namespace TarjetaSube
             EsTransbordo = esTransbordo;
             TarjetaId = tarjeta.ObtenerId();
 
-            // ← TIPO DE TARJETA (lo que faltaba en la consigna)
             TipoTarjeta = tarjeta switch
             {
                 TarjetaMedioBoleto => "Medio Boleto Estudiantil",
                 TarjetaBoletoGratuito => "Boleto Educativo Gratuito",
-                TarjetaFranquiciaCompleta => "Franquicia Completa (Jubilados/Discapacidad)",
+                TarjetaFranquiciaCompleta => "Franquicia Completa",
                 _ => "Tarjeta Normal"
             };
         }
@@ -38,23 +38,13 @@ namespace TarjetaSube
             Console.WriteLine("================================");
             Console.WriteLine($"Línea: {LineaColectivo}");
             Console.WriteLine($"Tarjeta ID: {TarjetaId}");
-            Console.WriteLine($"Tipo de tarjeta: {TipoTarjeta}");
-            Console.WriteLine($"Fecha: {FechaHora:dd/MM/yyyy}");
-            Console.WriteLine($"Hora: {FechaHora:HH:mm:ss}");
-            Console.WriteLine($"Importe pagado: ${ImportePagado:N0}");
-            Console.WriteLine($"Saldo restante: ${SaldoRestante:N0}");
-
-            if (EsTransbordo)
-                Console.WriteLine("*** TRASBORDO GRATUITO ***");
-
-            if (ImportePagado == 0m && !EsTransbordo)
-                Console.WriteLine("*** VIAJE GRATUITO ***");
-
+            Console.WriteLine($"Tipo: {TipoTarjeta}");
+            Console.WriteLine($"Fecha: {FechaHora:dd/MM/yyyy HH:mm}");
+            Console.WriteLine($"Importe: ${ImportePagado:N0}");
+            Console.WriteLine($"Saldo: ${SaldoRestante:N0}");
+            if (EsTransbordo) Console.WriteLine("*** TRASBORDO GRATUITO ***");
+            if (ImportePagado == 0 && !EsTransbordo) Console.WriteLine("*** VIAJE GRATUITO ***");
             Console.WriteLine("================================");
         }
-
-        public string ObtenerTipoTarjeta() => TipoTarjeta;
-        public long ObtenerIdTarjeta() => TarjetaId;
-        public decimal ObtenerTotalAbonado() => ImportePagado;
     }
 }

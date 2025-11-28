@@ -4,48 +4,39 @@ namespace TarjetaSube
 {
     public class Colectivo
     {
-        private string numeroLinea;
-        private decimal valorPasaje;
-        private bool esInterurbano;
+        protected string numeroLinea;
+        protected decimal valorPasaje;
 
-        public Colectivo(string linea)
+        public Colectivo(string linea) : this(linea, false) { }
+
+        protected Colectivo(string linea, bool interurbano)
         {
             numeroLinea = linea;
-            valorPasaje = 1580m;
-            esInterurbano = false;
-        }
-
-        public Colectivo(string linea, bool interurbano)
-        {
-            numeroLinea = linea;
-            esInterurbano = interurbano;
             valorPasaje = interurbano ? 3000m : 1580m;
         }
 
         public string ObtenerLinea() => numeroLinea;
-        public decimal ObtenerValorPasaje() => valorPasaje;
 
-        public Boleto PagarCon(Tarjeta tarjeta)
+        public virtual Boleto PagarCon(Tarjeta tarjeta, DateTime? fechaHora = null)
         {
-            DateTime ahora = DateTime.Now;
+            DateTime ahora = fechaHora ?? DateTime.Now;
 
-            if (!tarjeta.PuedeUsarseAhora())
+            if (!tarjeta.PuedeUsarseAhora(ahora))
                 return null;
 
             bool esTrasbordo = tarjeta.EsTrasbordoValido(numeroLinea, ahora);
-            decimal montoBase = esTrasbordo ? 0m : tarjeta.ObtenerMontoAPagar(valorPasaje);
+            decimal montoBase = esTrasbordo ? 0m : tarjeta.ObtenerMontoAPagar(valorPasaje, ahora);
 
-            if (!esTrasbordo && tarjeta.GetType() == typeof(Tarjeta))
-            {
-                montoBase = tarjeta.CalcularDescuentoUsoFrecuente(montoBase);
-            }
+            if (montoBase == -1m) return null;
 
-            bool pagoExitoso = (montoBase == 0) || tarjeta.DescontarSaldo(montoBase);
-            if (!pagoExitoso)
-                return null;
+            if (!esTrasbordo)
+                montoBase = tarjeta.AplicarDescuentoUsoFrecuente(montoBase, ahora);
+
+            bool pagoExitoso = montoBase == 0 || tarjeta.DescontarSaldo(montoBase);
+            if (!pagoExitoso) return null;
 
             tarjeta.RegistrarUltimoViaje(numeroLinea, ahora);
-            tarjeta.RegistrarViaje();
+            tarjeta.RegistrarViaje(ahora);
 
             return new Boleto(numeroLinea, montoBase, tarjeta, esTrasbordo);
         }

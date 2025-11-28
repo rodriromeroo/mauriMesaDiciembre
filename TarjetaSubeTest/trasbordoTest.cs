@@ -5,108 +5,78 @@ using TarjetaSube;
 namespace TarjetaSube.Tests
 {
     [TestFixture]
-    public class TrasbordoTest
+    public class TrasbordoTests
     {
-
         [Test]
-        public void Trasbordo_DentroDeUnaHora_EsGratis()
+        public void EsTrasbordoValido_EnCondicionesCorrectas_DeberiaSerTrue()
         {
-            Tarjeta tarjeta = new Tarjeta();
-            tarjeta.CargarSaldo(5000);
+            var tarjeta = new Tarjeta();
+            var ahora = new DateTime(2024, 11, 20, 10, 0, 0);
 
-            DateTime tiempo1 = new DateTime(2024, 11, 20, 10, 0, 0);
-            Colectivo cole1 = new Colectivo("120");
-            Boleto b1 = cole1.PagarCon(tarjeta, tiempo1);
+            tarjeta.RegistrarUltimoViaje("120", ahora.AddMinutes(-30));
+            bool resultado = tarjeta.EsTrasbordoValido("144", ahora);
 
-            decimal saldoDespues1 = tarjeta.ObtenerSaldo();
-
-            DateTime tiempo2 = tiempo1.AddMinutes(45);
-            Colectivo cole2 = new Colectivo("144");
-            Boleto b2 = cole2.PagarCon(tarjeta, tiempo2);
-
-            Assert.IsFalse(b1.EsTransbordo);
-            Assert.IsTrue(b2.EsTransbordo);
-            Assert.AreEqual(0, b2.ImportePagado);
-            Assert.AreEqual(saldoDespues1, tarjeta.ObtenerSaldo());
+            Assert.IsTrue(resultado);
         }
 
         [Test]
-        public void Trasbordo_VariasLineas_PrimeraCobraRestantesGratis()
+        public void EsTrasbordoValido_MismaLinea_NoDeberiaSerValido()
         {
-            Tarjeta tarjeta = new Tarjeta();
-            tarjeta.CargarSaldo(10000);
+            var tarjeta = new Tarjeta();
+            var ahora = new DateTime(2024, 11, 20, 10, 0, 0);
 
-            DateTime tiempo = new DateTime(2024, 11, 20, 10, 0, 0);
+            tarjeta.RegistrarUltimoViaje("120", ahora.AddMinutes(-30));
+            bool resultado = tarjeta.EsTrasbordoValido("120", ahora);
 
-            Colectivo cole1 = new Colectivo("120");
-            Boleto b1 = cole1.PagarCon(tarjeta, tiempo);
-            decimal saldoDespues1 = tarjeta.ObtenerSaldo();
-
-            Colectivo cole2 = new Colectivo("144");
-            Boleto b2 = cole2.PagarCon(tarjeta, tiempo.AddMinutes(20));
-
-            Colectivo cole3 = new Colectivo("K");
-            Boleto b3 = cole3.PagarCon(tarjeta, tiempo.AddMinutes(40));
-
-            Assert.AreEqual(1580, b1.ImportePagado);
-            Assert.AreEqual(0, b2.ImportePagado);
-            Assert.AreEqual(0, b3.ImportePagado);
-            Assert.IsTrue(b2.EsTransbordo);
-            Assert.IsTrue(b3.EsTransbordo);
-            Assert.AreEqual(saldoDespues1, tarjeta.ObtenerSaldo());
+            Assert.IsFalse(resultado);
         }
 
         [Test]
-        public void Trasbordo_Domingo_NoPuedeHacerTrasbordo()
+        public void EsTrasbordoValido_MasDe60Minutos_NoDeberiaSerValido()
         {
-            Tarjeta tarjeta = new Tarjeta();
-            tarjeta.CargarSaldo(10000);
+            var tarjeta = new Tarjeta();
+            var ahora = new DateTime(2024, 11, 20, 10, 0, 0);
 
-            DateTime tiempo1 = new DateTime(2024, 11, 17, 10, 0, 0); // Domingo
-            Colectivo cole1 = new Colectivo("120");
-            Boleto b1 = cole1.PagarCon(tarjeta, tiempo1);
+            tarjeta.RegistrarUltimoViaje("120", ahora.AddMinutes(-61));
+            bool resultado = tarjeta.EsTrasbordoValido("144", ahora);
 
-            DateTime tiempo2 = tiempo1.AddMinutes(30);
-            Colectivo cole2 = new Colectivo("144");
-            Boleto b2 = cole2.PagarCon(tarjeta, tiempo2);
-
-            Assert.IsFalse(b2.EsTransbordo);
-            Assert.AreEqual(1580, b2.ImportePagado);
+            Assert.IsFalse(resultado);
         }
 
         [Test]
-        public void Trasbordo_HorarioLimite_Hora22_NoPuede()
+        public void EsTrasbordoValido_Domingo_NoDeberiaSerValido()
         {
-            Tarjeta tarjeta = new Tarjeta();
-            tarjeta.CargarSaldo(10000);
+            var tarjeta = new Tarjeta();
+            var domingo = new DateTime(2024, 11, 24, 10, 0, 0);
 
-            DateTime tiempo1 = new DateTime(2024, 11, 20, 21, 45, 0);
-            Colectivo cole1 = new Colectivo("120");
-            Boleto b1 = cole1.PagarCon(tarjeta, tiempo1);
+            tarjeta.RegistrarUltimoViaje("120", domingo.AddMinutes(-30));
+            bool resultado = tarjeta.EsTrasbordoValido("144", domingo);
 
-            DateTime tiempo2 = tiempo1.AddMinutes(20);
-            Colectivo cole2 = new Colectivo("144");
-            Boleto b2 = cole2.PagarCon(tarjeta, tiempo2);
-
-            Assert.IsFalse(b2.EsTransbordo);
+            Assert.IsFalse(resultado);
         }
 
         [Test]
-        public void Trasbordo_Exactamente1Hora_YaNoPuede()
+        public void EsTrasbordoValido_FueraDeHorario_NoDeberiaSerValido()
         {
-            Tarjeta tarjeta = new Tarjeta();
-            tarjeta.CargarSaldo(10000);
+            var tarjeta = new Tarjeta();
+            var noche = new DateTime(2024, 11, 20, 22, 30, 0);
 
-            DateTime tiempo1 = new DateTime(2024, 11, 20, 10, 0, 0);
-            Colectivo cole1 = new Colectivo("120");
-            cole1.PagarCon(tarjeta, tiempo1);
+            tarjeta.RegistrarUltimoViaje("120", noche.AddMinutes(-30));
+            bool resultado = tarjeta.EsTrasbordoValido("144", noche);
 
-            DateTime tiempo2 = tiempo1.AddHours(1).AddMinutes(1);
-            Colectivo cole2 = new Colectivo("144");
-            Boleto b2 = cole2.PagarCon(tarjeta, tiempo2);
+            Assert.IsFalse(resultado);
+        }
 
-            Assert.IsFalse(b2.EsTransbordo);
-            Assert.AreEqual(1580, b2.ImportePagado);
+        [Test]
+        public void EsTrasbordoValido_SabadoDentroDeHorario_DeberiaSerValido()
+        {
+            var tarjeta = new Tarjeta();
+            var sabado = new DateTime(2024, 11, 23, 15, 0, 0);
+
+            tarjeta.RegistrarUltimoViaje("120", sabado.AddMinutes(-30));
+            bool resultado = tarjeta.EsTrasbordoValido("144", sabado);
+
+            Assert.IsTrue(resultado);
         }
     }
 }

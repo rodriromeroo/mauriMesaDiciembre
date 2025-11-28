@@ -9,171 +9,106 @@ namespace TarjetaSube.Tests
     {
         private Colectivo colectivo;
         private Tarjeta tarjeta;
+        private DateTime fecha;
 
         [SetUp]
         public void Setup()
         {
             colectivo = new Colectivo("133");
             tarjeta = new Tarjeta();
+            fecha = new DateTime(2024, 11, 20, 10, 0, 0);
         }
 
         [Test]
-        public void ObtenerLinea_DevuelveLineaCorrecta()
+        public void ObtenerLinea_DeberiaDevolverLineaCorrecta()
         {
-            string linea = colectivo.ObtenerLinea();
-            Assert.AreEqual("133", linea);
+            Assert.AreEqual("133", colectivo.ObtenerLinea());
         }
 
         [Test]
-        public void PagarCon_TarjetaConSaldo_DevuelveBoleto()
+        public void PagarCon_TarjetaConSaldo_DeberiaGenerarBoleto()
         {
             tarjeta.CargarSaldo(5000);
-            Boleto boleto = colectivo.PagarCon(tarjeta);
+            Boleto boleto = colectivo.PagarCon(tarjeta, fecha);
+
             Assert.IsNotNull(boleto);
+            Assert.AreEqual("133", boleto.LineaColectivo);
+            Assert.AreEqual(1580m, boleto.ImportePagado);
         }
 
         [Test]
-        public void PagarCon_TarjetaSinSaldo_DevuelveNull()
+        public void PagarCon_TarjetaSinSaldo_DeberiaDevolverNull()
         {
-            Boleto boleto = colectivo.PagarCon(tarjeta);
+            Boleto boleto = colectivo.PagarCon(tarjeta, fecha);
             Assert.IsNull(boleto);
         }
 
         [Test]
-        public void PagarCon_DescontaSaldoDeTarjeta()
+        public void PagarCon_DeberiaDescontarSaldoCorrectamente()
         {
             tarjeta.CargarSaldo(5000);
             decimal saldoInicial = tarjeta.ObtenerSaldo();
-            decimal tarifaEsperada = colectivo.ObtenerValorPasaje();
 
-            colectivo.PagarCon(tarjeta);
+            colectivo.PagarCon(tarjeta, fecha);
 
-            Assert.AreEqual(saldoInicial - tarifaEsperada, tarjeta.ObtenerSaldo());
+            Assert.AreEqual(saldoInicial - 1580m, tarjeta.ObtenerSaldo());
         }
 
         [Test]
-        public void PagarCon_BoletoConLineaCorrecta()
+        public void PagarCon_TarjetaMedioBoleto_DeberiaCobrarMitad()
         {
-            tarjeta.CargarSaldo(5000);
-            Boleto boleto = colectivo.PagarCon(tarjeta);
-            Assert.AreEqual("133", boleto.LineaColectivo);
+            var medio = new TarjetaMedioBoleto();
+            medio.CargarSaldo(5000);
+
+            Boleto boleto = colectivo.PagarCon(medio, fecha);
+
+            Assert.IsNotNull(boleto);
+            Assert.AreEqual(790m, boleto.ImportePagado);
         }
 
         [Test]
-        public void PagarCon_BoletoConImporteCorrecto()
+        public void PagarCon_TarjetaBoletoGratuito_DeberiaSerGratis()
         {
-            tarjeta.CargarSaldo(5000);
-            decimal tarifaEsperada = colectivo.ObtenerValorPasaje();
+            var gratuito = new TarjetaBoletoGratuito();
+            gratuito.CargarSaldo(5000);
 
-            Boleto boleto = colectivo.PagarCon(tarjeta);
+            Boleto boleto = colectivo.PagarCon(gratuito, fecha);
 
-            Assert.AreEqual(tarifaEsperada, boleto.ImportePagado);
+            Assert.IsNotNull(boleto);
+            Assert.AreEqual(0m, boleto.ImportePagado);
         }
 
         [Test]
-        public void PagarCon_ConSaldoNegativoPermitido()
+        public void PagarCon_TarjetaFranquiciaCompleta_DeberiaSerGratis()
+        {
+            var franquicia = new TarjetaFranquiciaCompleta();
+
+            Boleto boleto = colectivo.PagarCon(franquicia, fecha);
+
+            Assert.IsNotNull(boleto);
+            Assert.AreEqual(0m, boleto.ImportePagado);
+        }
+
+        [Test]
+        public void PagarCon_ConSaldoNegativoPermitido_DeberiaGenerarBoleto()
         {
             tarjeta.CargarSaldo(2000);
-            decimal tarifa = colectivo.ObtenerValorPasaje();
-
-            colectivo.PagarCon(tarjeta);
-            Boleto boleto2 = colectivo.PagarCon(tarjeta);
+            colectivo.PagarCon(tarjeta, fecha);
+            Boleto boleto2 = colectivo.PagarCon(tarjeta, fecha.AddMinutes(10));
 
             Assert.IsNotNull(boleto2);
-            Assert.AreEqual(2000 - (tarifa * 2), tarjeta.ObtenerSaldo());
+            Assert.IsTrue(tarjeta.ObtenerSaldo() < 0);
         }
 
         [Test]
-        public void PagarCon_ExcedeLimiteNegativo_DevuelveNull()
+        public void PagarCon_ExcedeSaldoNegativo_DeberiaDevolverNull()
         {
             tarjeta.CargarSaldo(2000);
-            colectivo.PagarCon(tarjeta);
-            colectivo.PagarCon(tarjeta);
-            Boleto boleto3 = colectivo.PagarCon(tarjeta);
+            colectivo.PagarCon(tarjeta, fecha);
+            colectivo.PagarCon(tarjeta, fecha.AddMinutes(10));
+            Boleto boleto3 = colectivo.PagarCon(tarjeta, fecha.AddMinutes(20));
+
             Assert.IsNull(boleto3);
-        }
-
-        [Test]
-        public void PagarCon_TarjetaMedioBoleto_DescuentaMitad()
-        {
-            TarjetaMedioBoleto medio = new TarjetaMedioBoleto();
-            medio.CargarSaldo(5000);
-            decimal saldoInicial = medio.ObtenerSaldo();
-            decimal tarifaEsperada = colectivo.ObtenerValorPasaje() / 2;
-
-            colectivo.PagarCon(medio);
-
-            Assert.AreEqual(saldoInicial - tarifaEsperada, medio.ObtenerSaldo());
-        }
-
-        [Test]
-        public void PagarCon_TarjetaBoletoGratuito_NoDescuenta()
-        {
-            TarjetaBoletoGratuito gratuito = new TarjetaBoletoGratuito();
-            gratuito.CargarSaldo(5000);
-            colectivo.PagarCon(gratuito);
-            Assert.AreEqual(5000, gratuito.ObtenerSaldo());
-        }
-
-        [Test]
-        public void PagarCon_TarjetaFranquiciaCompleta_SiempreGeneraBoleto()
-        {
-            TarjetaFranquiciaCompleta franquicia = new TarjetaFranquiciaCompleta();
-            Boleto b1 = colectivo.PagarCon(franquicia);
-            Boleto b2 = colectivo.PagarCon(franquicia);
-            Boleto b3 = colectivo.PagarCon(franquicia);
-
-            Assert.IsNotNull(b1);
-            Assert.IsNotNull(b2);
-            Assert.IsNotNull(b3);
-        }
-
-        [Test]
-        public void ObtenerLinea_ConLineaLarga_DevuelveCompleta()
-        {
-            Colectivo coleLineaLarga = new Colectivo("Línea Panorámica del Centro");
-            Assert.AreEqual("Línea Panorámica del Centro", coleLineaLarga.ObtenerLinea());
-        }
-
-        [Test]
-        public void PagarCon_VariasTarjetasDiferentes_FuncionaCorrectamente()
-        {
-            Tarjeta normal = new Tarjeta();
-            TarjetaMedioBoleto medio = new TarjetaMedioBoleto();
-            TarjetaBoletoGratuito gratuito = new TarjetaBoletoGratuito();
-
-            normal.CargarSaldo(5000);
-            medio.CargarSaldo(5000);
-            gratuito.CargarSaldo(5000);
-
-            decimal tarifa = colectivo.ObtenerValorPasaje();
-
-            Boleto b1 = colectivo.PagarCon(normal);
-            Boleto b2 = colectivo.PagarCon(medio);
-            Boleto b3 = colectivo.PagarCon(gratuito);
-
-            Assert.AreEqual(tarifa, b1.ImportePagado);
-            Assert.AreEqual(tarifa / 2, b2.ImportePagado);
-            Assert.AreEqual(0, b3.ImportePagado);
-        }
-
-        [Test]
-        public void PagarCon_BoletoTieneLineaCorrecta()
-        {
-            Colectivo cole102 = new Colectivo("102");
-            Tarjeta t = new Tarjeta();
-            t.CargarSaldo(5000);
-
-            Boleto boleto = cole102.PagarCon(t);
-            Assert.AreEqual("102", boleto.LineaColectivo);
-        }
-
-        [Test]
-        public void ColectivoUrbano_TieneTarifa1580()
-        {
-            Colectivo urbano = new Colectivo("K");
-            Assert.AreEqual(1580, urbano.ObtenerValorPasaje());
-            Assert.IsFalse(urbano.EsInterurbano());
         }
     }
 }

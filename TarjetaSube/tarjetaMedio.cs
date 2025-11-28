@@ -8,43 +8,39 @@ namespace TarjetaSube
         private int viajesConDescuentoHoy = 0;
         private DateTime fechaUltimoDescuento = DateTime.Today;
 
-        public override decimal ObtenerMontoAPagar(decimal tarifaBase)
+        public override decimal ObtenerMontoAPagar(decimal tarifaBase, DateTime fechaHora)
         {
-            DateTime ahora = DateTime.Now;
-
-            if (ahora.Date != fechaUltimoDescuento.Date)
+            if (fechaHora.Date != fechaUltimoDescuento.Date)
             {
                 viajesConDescuentoHoy = 0;
-                fechaUltimoDescuento = ahora.Date;
+                fechaUltimoDescuento = fechaHora.Date;
             }
 
-            if (ultimoViaje != DateTime.MinValue && (ahora - ultimoViaje).TotalMinutes < 5)
-            {
-                ultimoViaje = ahora;
-                return tarifaBase; 
-            }
+            if (ultimoViaje != DateTime.MinValue && (fechaHora - ultimoViaje).TotalMinutes < 5)
+                return -1m;
 
             if (viajesConDescuentoHoy < 2)
             {
                 viajesConDescuentoHoy++;
-                ultimoViaje = ahora;
+                ultimoViaje = fechaHora;
                 return tarifaBase / 2;
             }
             else
             {
-                ultimoViaje = ahora;
-                return tarifaBase; 
+                ultimoViaje = fechaHora;
+                return tarifaBase;
             }
         }
 
-        public override bool PuedeUsarseAhora()
+        public override bool PuedeUsarseAhora(DateTime fechaHora)
         {
-            DateTime ahora = DateTime.Now;
-            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
+            if (fechaHora.DayOfWeek == DayOfWeek.Saturday || fechaHora.DayOfWeek == DayOfWeek.Sunday)
                 return false;
-            if (ahora.Hour < 6 || ahora.Hour >= 22)
+            if (fechaHora.Hour < 6 || fechaHora.Hour >= 22)
                 return false;
             return true;
         }
+
+        public override decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => monto;
     }
 }

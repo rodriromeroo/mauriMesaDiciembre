@@ -4,19 +4,12 @@ namespace TarjetaSube
 {
     public class TarjetaBoletoGratuito : Tarjeta
     {
-        private int viajesGratuitosHoy;
-        private DateTime ultimaFechaViaje;
+        private int viajesGratuitosHoy = 0;
+        private DateTime ultimaFechaViaje = DateTime.MinValue;
 
-        public TarjetaBoletoGratuito() : base()
+        public override decimal ObtenerMontoAPagar(decimal monto, DateTime fechaHora)
         {
-            viajesGratuitosHoy = 0;
-            ultimaFechaViaje = DateTime.MinValue;
-        }
-
-        public override decimal ObtenerMontoAPagar(decimal monto)
-        {
-            DateTime hoy = DateTime.Today;
-            if (ultimaFechaViaje.Date != hoy)
+            if (ultimaFechaViaje.Date != fechaHora.Date)
                 viajesGratuitosHoy = 0;
 
             if (viajesGratuitosHoy < 2)
@@ -25,24 +18,23 @@ namespace TarjetaSube
                 return monto;
         }
 
-        public override bool PuedeUsarseAhora()
+        public override bool PuedeUsarseAhora(DateTime fechaHora)
         {
-            DateTime ahora = DateTime.Now;
-            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
+            if (fechaHora.DayOfWeek == DayOfWeek.Saturday || fechaHora.DayOfWeek == DayOfWeek.Sunday)
                 return false;
-            if (ahora.Hour < 6 || ahora.Hour >= 22)
+            if (fechaHora.Hour < 6 || fechaHora.Hour >= 22)
                 return false;
             return true;
         }
 
-        public override void RegistrarViaje()
+        public override void RegistrarViaje(DateTime fechaHora)
         {
-            DateTime hoy = DateTime.Today;
-            if (ultimaFechaViaje.Date != hoy)
+            if (ultimaFechaViaje.Date != fechaHora.Date)
                 viajesGratuitosHoy = 0;
-
             viajesGratuitosHoy++;
-            ultimaFechaViaje = DateTime.Now;
+            ultimaFechaViaje = fechaHora;
         }
+
+        public override decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => monto;
     }
 }

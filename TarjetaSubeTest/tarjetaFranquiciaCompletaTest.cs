@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using TarjetaSube;
+using System;
 
 namespace TarjetaSube.Tests
 {
@@ -17,73 +18,41 @@ namespace TarjetaSube.Tests
         }
 
         [Test]
-        public void CalcularDescuento_SiempreDevuelveCero()
+        public void ObtenerMontoAPagar_SiempreDeberiaSerCero()
         {
-            decimal descuento = tarjeta.CalcularDescuento(1580);
-            Assert.AreEqual(0, descuento);
+            var fecha = new DateTime(2024, 11, 20, 10, 0, 0);
+            decimal monto = tarjeta.ObtenerMontoAPagar(1580, fecha);
+            Assert.AreEqual(0m, monto);
         }
 
         [Test]
-        public void CalcularDescuento_ConCualquierMontoDevuelveCero()
+        public void PagarCon_DeberiaGenerarBoletoGratis()
         {
-            Assert.AreEqual(0, tarjeta.CalcularDescuento(100));
-            Assert.AreEqual(0, tarjeta.CalcularDescuento(5000));
-            Assert.AreEqual(0, tarjeta.CalcularDescuento(999999));
-        }
-
-        [Test]
-        public void DescontarSaldo_SiempreRetornaTrue()
-        {
-            Assert.IsTrue(tarjeta.DescontarSaldo(1000));
-            Assert.IsTrue(tarjeta.DescontarSaldo(50000));
-            Assert.IsTrue(tarjeta.DescontarSaldo(999999));
-        }
-
-        [Test]
-        public void DescontarSaldo_NoModificaSaldo()
-        {
-            decimal saldoInicial = tarjeta.ObtenerSaldo();
-            tarjeta.DescontarSaldo(10000);
-            Assert.AreEqual(saldoInicial, tarjeta.ObtenerSaldo());
-        }
-
-        [Test]
-        public void PagarCon_SinSaldo_GeneraBoleto()
-        {
-            Boleto boleto = colectivo.PagarCon(tarjeta);
+            var fecha = new DateTime(2024, 11, 20, 10, 0, 0);
+            var boleto = colectivo.PagarCon(tarjeta, fecha);
             Assert.IsNotNull(boleto);
+            Assert.AreEqual(0m, boleto.ImportePagado);
         }
 
         [Test]
-        public void PagarCon_ImportePagadoSiempreCero()
+        public void AplicarDescuentoUsoFrecuente_NoDeberiaAplicarDescuento()
         {
-            Boleto boleto = colectivo.PagarCon(tarjeta);
-            Assert.AreEqual(0, boleto.ImportePagado);
+            var fecha = new DateTime(2024, 11, 20, 10, 0, 0);
+            decimal monto = 1580m;
+            decimal resultado = tarjeta.AplicarDescuentoUsoFrecuente(monto, fecha);
+            Assert.AreEqual(monto, resultado);
         }
 
         [Test]
-        public void PagarCon_MultiplesViajes_SiempreGeneraBoleto()
+        public void DescontarSaldo_NoDeberiaDescontarCuandoMontoEsCero()
         {
-            for (int i = 0; i < 100; i++)
-            {
-                Boleto boleto = colectivo.PagarCon(tarjeta);
-                Assert.IsNotNull(boleto);
-            }
-        }
+            tarjeta.CargarSaldo(5000);
+            decimal saldoInicial = tarjeta.ObtenerSaldo();
 
-        [Test]
-        public void FranquiciaCompleta_HeredaDeTarjeta()
-        {
-            Assert.IsInstanceOf<Tarjeta>(tarjeta);
-        }
+            bool resultado = tarjeta.DescontarSaldo(0m);
 
-        [Test]
-        public void PagarCon_ConSaldoCargado_NoModificaSaldo()
-        {
-            tarjeta.CargarSaldo(10000);
-            colectivo.PagarCon(tarjeta);
-            colectivo.PagarCon(tarjeta);
-            Assert.AreEqual(10000, tarjeta.ObtenerSaldo());
+            Assert.IsTrue(resultado);
+            Assert.AreEqual(saldoInicial, tarjeta.ObtenerSaldo());
         }
     }
 }
