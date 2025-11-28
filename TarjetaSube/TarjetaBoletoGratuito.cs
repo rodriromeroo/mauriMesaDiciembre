@@ -34,6 +34,13 @@ namespace TarjetaSube
             viajesGratuitosHoy++;
             ultimaFechaViaje = fechaHora;
         }
+        public override bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
+        {
+            if (ultimoViajeFechaHora == DateTime.MinValue) return false;
+            if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+            if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
+            return PuedeUsarseAhora(ahora);
+        }
 
         public override decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => monto;
     }

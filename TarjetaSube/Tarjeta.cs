@@ -30,8 +30,8 @@ namespace TarjetaSube
         protected int viajesDelMes;
         protected DateTime ultimoMesRegistrado;
 
-        private DateTime ultimoViajeFechaHora = DateTime.MinValue;
-        private string ultimaLineaViajada = "";
+        protected DateTime ultimoViajeFechaHora = DateTime.MinValue;
+        protected string ultimaLineaViajada = "";
 
         public Tarjeta()
         {
@@ -107,13 +107,14 @@ namespace TarjetaSube
             ultimoViajeFechaHora = cuando;
         }
 
-        public bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
+        public virtual bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
         {
             if (ultimoViajeFechaHora == DateTime.MinValue) return false;
             if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
             if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
             if (ahora.DayOfWeek == DayOfWeek.Sunday) return false;
             if (ahora.Hour < 7 || ahora.Hour >= 22) return false;
+
             return true;
         }
     }
