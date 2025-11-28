@@ -4,41 +4,26 @@ namespace TarjetaSube
 {
     public class TarjetaFranquiciaCompleta : Tarjeta
     {
-        public TarjetaFranquiciaCompleta() : base()
-        {
-        }
+        public override decimal ObtenerMontoAPagar(decimal monto, DateTime fechaHora) => 0m;
 
-        public decimal CalcularDescuento(decimal monto)
+        public override bool PuedeUsarseAhora(DateTime fechaHora)
         {
-            return 0;
-        }
-
-        public bool PuedeViajarEnEsteHorario()
-        {
-            DateTime ahora = DateTime.Now;
-            
-            // verifica si es lunes a viernes
-            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
-            {
+            if (fechaHora.DayOfWeek == DayOfWeek.Saturday || fechaHora.DayOfWeek == DayOfWeek.Sunday)
                 return false;
-            }
-            
-            // verifica si esta entre las 6 y las 22
-            if (ahora.Hour < 6 || ahora.Hour >= 22)
-            {
+            if (fechaHora.Hour < 6 || fechaHora.Hour >= 22)
                 return false;
-            }
-            
             return true;
         }
 
-        public override bool DescontarSaldo(decimal monto)
+        public override bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
         {
-            if (ObtenerSaldoPendiente() > 0)
-            {
-                AcreditarCarga();
-            }
-            return true;
+            if (ultimoViajeFechaHora == DateTime.MinValue) return false;
+            if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+            if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
+
+            return PuedeUsarseAhora(ahora);
         }
+
+        public override decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => monto;
     }
 }

@@ -2,142 +2,170 @@ using System;
 using NUnit.Framework;
 using TarjetaSube;
 
-namespace TarjetaSubeTest
+namespace TarjetaSube.Tests
 {
     [TestFixture]
     public class LimitacionFranquiciaCompletaTest
     {
         [Test]
-        public void BoletoGratuito_PermiteTodosLosViajesGratis()
+        public void BoletoGratuito_PrimerosDosViajesGratis_TerceroCobra()
         {
-            // Arrange
             TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
             tarjeta.CargarSaldo(5000);
             Colectivo colectivo = new Colectivo("102");
+            DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0);
 
-            // Crear viajes en horario permitido (Lun-Vie 6-22)
-            DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0); // Miércoles 10am
-
-            // Act
             Boleto primerViaje = colectivo.PagarCon(tarjeta, horarioPermitido);
             Boleto segundoViaje = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(10));
             Boleto tercerViaje = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(20));
 
-            // Assert - solo los primeros 2 viajes del día son gratis
             Assert.IsNotNull(primerViaje);
             Assert.IsNotNull(segundoViaje);
             Assert.IsNotNull(tercerViaje);
-
-            Assert.AreEqual(0, primerViaje.ImportePagado);
-            Assert.AreEqual(0, segundoViaje.ImportePagado);
-            Assert.AreEqual(1580, tercerViaje.ImportePagado); // Tercer viaje cobra tarifa completa
+            Assert.AreEqual(0m, primerViaje.ImportePagado);
+            Assert.AreEqual(0m, segundoViaje.ImportePagado);
+            Assert.AreEqual(1580m, tercerViaje.ImportePagado);
         }
 
         [Test]
-        public void BoletoGratuito_NuncaDescuentaSaldo()
+        public void BoletoGratuito_PrimerosDosViajes_NoDescuentanSaldo()
         {
-            // Arrange
             TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
             tarjeta.CargarSaldo(10000);
             Colectivo colectivo = new Colectivo("K");
             DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0);
-
             decimal saldoInicial = tarjeta.ObtenerSaldo();
 
-            // Act - primeros 2 viajes (gratis)
             colectivo.PagarCon(tarjeta, horarioPermitido);
             colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(10));
 
             decimal saldoFinal = tarjeta.ObtenerSaldo();
 
-            // Assert - los 2 primeros viajes no descuentan
             Assert.AreEqual(saldoInicial, saldoFinal);
         }
 
         [Test]
-        public void BoletoGratuito_SiemprePuedeViajar()
+        public void BoletoGratuito_TercerViajeYPosteriores_DescuentanSaldo()
         {
-            // Arrange
             TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
-            tarjeta.CargarSaldo(20000);
+            tarjeta.CargarSaldo(10000);
             Colectivo colectivo = new Colectivo("144");
             DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0);
 
-            // Act y Assert - puede hacer todos los viajes, aunque después del 2do pague
-            for (int i = 0; i < 10; i++)
-            {
-                Boleto boleto = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(i * 10));
-                Assert.IsNotNull(boleto);
-            }
+            colectivo.PagarCon(tarjeta, horarioPermitido);
+            colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(10));
+            decimal saldoAntesTercer = tarjeta.ObtenerSaldo();
+
+            colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(20));
+
+            Assert.AreEqual(saldoAntesTercer - 1580m, tarjeta.ObtenerSaldo());
         }
 
         [Test]
-        public void BoletoGratuito_SinSaldo_SigueFuncionando()
+        public void BoletoGratuito_SinSaldo_PrimerosDosViajesFuncionan()
         {
-            // Arrange
             TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
-            // No carga saldo
             Colectivo colectivo = new Colectivo("27");
             DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0);
 
-            // Act - primeros 2 viajes gratis, el tercero necesita saldo
             Boleto primerViaje = colectivo.PagarCon(tarjeta, horarioPermitido);
             Boleto segundoViaje = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(10));
             Boleto tercerViaje = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(20));
 
-            // Assert - los primeros 2 funcionan, el tercero necesita saldo
             Assert.IsNotNull(primerViaje);
             Assert.IsNotNull(segundoViaje);
-            Assert.IsNull(tercerViaje); // No tiene saldo para el tercer viaje
+            Assert.IsNull(tercerViaje);
         }
 
         [Test]
-        public void BoletoGratuito_PuedeViajarGratisVerificaCorrectamente()
+        public void BoletoGratuito_NuevoDia_ReiniciaContadorViajesGratuitos()
         {
-            // Arrange
-            TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
-            tarjeta.CargarSaldo(10000);
-            Colectivo colectivo = new Colectivo("144");
-            DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0);
-
-            // Act y Assert - verifica que PuedeViajarGratis funcione correctamente
-            Assert.IsTrue(tarjeta.PuedeViajarGratis()); // Puede viajar gratis al inicio
-
-            Boleto boleto1 = colectivo.PagarCon(tarjeta, horarioPermitido);
-            Assert.IsNotNull(boleto1);
-            Assert.IsTrue(tarjeta.PuedeViajarGratis()); // Aún puede viajar gratis (1 de 2)
-
-            Boleto boleto2 = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(10));
-            Assert.IsNotNull(boleto2);
-            Assert.IsFalse(tarjeta.PuedeViajarGratis()); // Ya no puede viajar gratis (2 de 2)
-
-            Boleto boleto3 = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(20));
-            Assert.IsNotNull(boleto3);
-        }
-
-        [Test]
-        public void BoletoGratuito_ContadorViajesGratuitosFuncionaCorrectamente()
-        {
-            // Arrange
             TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
             tarjeta.CargarSaldo(10000);
             Colectivo colectivo = new Colectivo("133");
-            DateTime horarioPermitido = new DateTime(2024, 11, 20, 10, 0, 0);
+            DateTime dia1 = new DateTime(2024, 11, 20, 10, 0, 0);
+            DateTime dia2 = new DateTime(2024, 11, 21, 10, 0, 0);
 
-            // Act y Assert
-            Assert.AreEqual(0, tarjeta.ObtenerViajesGratuitosHoy());
+            colectivo.PagarCon(tarjeta, dia1);
+            colectivo.PagarCon(tarjeta, dia1.AddMinutes(10));
+            colectivo.PagarCon(tarjeta, dia1.AddMinutes(20));
 
-            Boleto boleto1 = colectivo.PagarCon(tarjeta, horarioPermitido);
-            Assert.AreEqual(0, boleto1.ImportePagado);
-            Assert.AreEqual(1, tarjeta.ObtenerViajesGratuitosHoy());
+            Boleto primerViajeDia2 = colectivo.PagarCon(tarjeta, dia2);
+            Boleto segundoViajeDia2 = colectivo.PagarCon(tarjeta, dia2.AddMinutes(10));
 
-            Boleto boleto2 = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(10));
-            Assert.AreEqual(0, boleto2.ImportePagado);
-            Assert.AreEqual(2, tarjeta.ObtenerViajesGratuitosHoy());
+            Assert.AreEqual(0m, primerViajeDia2.ImportePagado);
+            Assert.AreEqual(0m, segundoViajeDia2.ImportePagado);
+        }
 
-            Boleto boleto3 = colectivo.PagarCon(tarjeta, horarioPermitido.AddMinutes(20));
-            Assert.AreEqual(1580, boleto3.ImportePagado); // Ya no es gratis
-            Assert.AreEqual(3, tarjeta.ObtenerViajesGratuitosHoy()); // Aumenta a 3 porque registra el viaje
+        [Test]
+        public void BoletoGratuito_FueraDeHorario_NoPermitePagar()
+        {
+            TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
+            tarjeta.CargarSaldo(10000);
+            Colectivo colectivo = new Colectivo("102");
+            DateTime fueraHorario = new DateTime(2024, 11, 20, 23, 0, 0);
+
+            Boleto boleto = colectivo.PagarCon(tarjeta, fueraHorario);
+
+            Assert.IsNull(boleto);
+        }
+
+        [Test]
+        public void BoletoGratuito_Sabado_NoPermitePagar()
+        {
+            TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
+            tarjeta.CargarSaldo(10000);
+            Colectivo colectivo = new Colectivo("102");
+            DateTime sabado = new DateTime(2024, 11, 23, 10, 0, 0);
+
+            Boleto boleto = colectivo.PagarCon(tarjeta, sabado);
+
+            Assert.IsNull(boleto);
+        }
+
+        [Test]
+        public void BoletoGratuito_Domingo_NoPermitePagar()
+        {
+            TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
+            tarjeta.CargarSaldo(10000);
+            Colectivo colectivo = new Colectivo("102");
+            DateTime domingo = new DateTime(2024, 11, 24, 10, 0, 0);
+
+            Boleto boleto = colectivo.PagarCon(tarjeta, domingo);
+
+            Assert.IsNull(boleto);
+        }
+
+        [Test]
+        public void BoletoGratuito_DentroDeHorarioYDiasHabiles_PermitePagar()
+        {
+            TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
+            tarjeta.CargarSaldo(10000);
+            Colectivo colectivo = new Colectivo("102");
+            DateTime miercoles = new DateTime(2024, 11, 20, 10, 0, 0);
+
+            Boleto boleto = colectivo.PagarCon(tarjeta, miercoles);
+
+            Assert.IsNotNull(boleto);
+        }
+
+        [Test]
+        public void BoletoGratuito_ViajesConsecutivosMismoDia_FuncionaCorrectamente()
+        {
+            TarjetaBoletoGratuito tarjeta = new TarjetaBoletoGratuito();
+            tarjeta.CargarSaldo(10000);
+            Colectivo colectivo = new Colectivo("144");
+            DateTime horario = new DateTime(2024, 11, 20, 10, 0, 0);
+
+            Boleto b1 = colectivo.PagarCon(tarjeta, horario);
+            Boleto b2 = colectivo.PagarCon(tarjeta, horario.AddMinutes(10));
+            Boleto b3 = colectivo.PagarCon(tarjeta, horario.AddMinutes(20));
+            Boleto b4 = colectivo.PagarCon(tarjeta, horario.AddMinutes(30));
+
+            Assert.AreEqual(0m, b1.ImportePagado);
+            Assert.AreEqual(0m, b2.ImportePagado);
+            Assert.AreEqual(1580m, b3.ImportePagado);
+            Assert.AreEqual(1580m, b4.ImportePagado);
         }
     }
 }

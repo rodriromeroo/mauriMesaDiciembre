@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using TarjetaSube;
+using System;
 
 namespace TarjetaSube.Tests
 {
@@ -8,106 +9,116 @@ namespace TarjetaSube.Tests
     {
         private TarjetaMedioBoleto tarjeta;
         private Colectivo colectivo;
+        private DateTime fecha;
 
         [SetUp]
         public void Setup()
         {
             tarjeta = new TarjetaMedioBoleto();
             colectivo = new Colectivo("144");
+            tarjeta.CargarSaldo(10000);
+            fecha = new DateTime(2024, 11, 20, 10, 0, 0);
         }
 
         [Test]
-        public void CalcularDescuento_DevuelveMitad()
+        public void ObtenerMontoAPagar_PrimerViaje_DevuelveMitad()
         {
-            decimal descuento = tarjeta.CalcularDescuento(1580);
-            Assert.AreEqual(790, descuento);
+            decimal monto = tarjeta.ObtenerMontoAPagar(1580m, fecha);
+            Assert.AreEqual(790m, monto);
         }
 
         [Test]
-        public void CalcularDescuento_ConDiferentesMontosDevuelveMitad()
+        public void ObtenerMontoAPagar_SegundoViaje_DevuelveMitad()
         {
-            Assert.AreEqual(50, tarjeta.CalcularDescuento(100));
-            Assert.AreEqual(250, tarjeta.CalcularDescuento(500));
-            Assert.AreEqual(1000, tarjeta.CalcularDescuento(2000));
+            tarjeta.ObtenerMontoAPagar(1580m, fecha);
+            decimal monto2 = tarjeta.ObtenerMontoAPagar(1580m, fecha.AddMinutes(10));
+
+            Assert.AreEqual(790m, monto2);
         }
 
         [Test]
-        public void PagarCon_DescuentaSoloMitad()
+        public void ObtenerMontoAPagar_TercerViaje_DevuelveCompleto()
         {
-            tarjeta.CargarSaldo(5000);
+            tarjeta.ObtenerMontoAPagar(1580m, fecha);
+            tarjeta.ObtenerMontoAPagar(1580m, fecha.AddMinutes(10));
+            decimal monto3 = tarjeta.ObtenerMontoAPagar(1580m, fecha.AddMinutes(20));
+
+            Assert.AreEqual(1580m, monto3);
+        }
+
+        [Test]
+        public void ObtenerMontoAPagar_AntesDe5Minutos_DevuelveMenosUno()
+        {
+            tarjeta.ObtenerMontoAPagar(1580m, fecha);
+            decimal monto2 = tarjeta.ObtenerMontoAPagar(1580m, fecha.AddMinutes(4));
+
+            Assert.AreEqual(-1m, monto2);
+        }
+
+        [Test]
+        public void ObtenerMontoAPagar_NuevoDia_ReiniciaContador()
+        {
+            tarjeta.ObtenerMontoAPagar(1580m, fecha);
+            tarjeta.ObtenerMontoAPagar(1580m, fecha.AddMinutes(10));
+            tarjeta.ObtenerMontoAPagar(1580m, fecha.AddMinutes(20));
+
+            var dia2 = new DateTime(2024, 11, 21, 10, 0, 0);
+            decimal montoDia2 = tarjeta.ObtenerMontoAPagar(1580m, dia2);
+
+            Assert.AreEqual(790m, montoDia2);
+        }
+
+        [Test]
+        public void AplicarDescuentoUsoFrecuente_NoDeberiaAplicarDescuento()
+        {
+            decimal monto = 1580m;
+            decimal resultado = tarjeta.AplicarDescuentoUsoFrecuente(monto, fecha);
+            Assert.AreEqual(monto, resultado);
+        }
+
+        [Test]
+        public void DescontarSaldo_ConSaldoSuficiente_DeberiaFuncionar()
+        {
             decimal saldoInicial = tarjeta.ObtenerSaldo();
-            decimal tarifaMedioBoleto = colectivo.ObtenerValorPasaje() / 2;
+            bool resultado = tarjeta.DescontarSaldo(790m);
 
-            colectivo.PagarCon(tarjeta);
-
-            Assert.AreEqual(saldoInicial - tarifaMedioBoleto, tarjeta.ObtenerSaldo());
+            Assert.IsTrue(resultado);
+            Assert.AreEqual(saldoInicial - 790m, tarjeta.ObtenerSaldo());
         }
 
         [Test]
-        public void PagarCon_ImportePagadoEsMitad()
+        public void PagarCon_ConSaldoSuficiente_DeberiaGenerarBoleto()
         {
-            tarjeta.CargarSaldo(3000);
-            decimal tarifaEsperada = colectivo.ObtenerValorPasaje() / 2;
-
-            Boleto boleto = colectivo.PagarCon(tarjeta);
-
-            Assert.AreEqual(tarifaEsperada, boleto.ImportePagado);
-        }
-
-        [Test]
-        public void MedioBoleto_HeredaDeTarjeta()
-        {
-            Assert.IsInstanceOf<Tarjeta>(tarjeta);
-        }
-
-        [Test]
-        public void PagarCon_SinSaldo_UsaSaldoNegativo()
-        {
-            decimal tarifaMedioBoleto = colectivo.ObtenerValorPasaje() / 2;
-
-            Boleto boleto = colectivo.PagarCon(tarjeta);
-
+            var boleto = colectivo.PagarCon(tarjeta, fecha);
             Assert.IsNotNull(boleto);
-            Assert.AreEqual(-tarifaMedioBoleto, tarjeta.ObtenerSaldo());
+            Assert.AreEqual(790m, boleto.ImportePagado);
         }
 
         [Test]
-        public void PagarCon_ConSaldoInsuficiente_PuedeUsarHasta1200Negativo()
+        public void PuedeUsarseAhora_DentroDeHorario_DeberiaSerTrue()
         {
-            tarjeta.CargarSaldo(2000);
-            decimal tarifaMedioBoleto = colectivo.ObtenerValorPasaje() / 2;
+            var fechaValida = new DateTime(2024, 11, 20, 15, 0, 0);
+            bool resultado = tarjeta.PuedeUsarseAhora(fechaValida);
 
-            colectivo.PagarCon(tarjeta); // viaje 1
-            colectivo.PagarCon(tarjeta); // viaje 2
-            colectivo.PagarCon(tarjeta); // viaje 3
-
-            decimal saldoEsperado = 2000 - (tarifaMedioBoleto * 3);
-            Assert.AreEqual(saldoEsperado, tarjeta.ObtenerSaldo());
+            Assert.IsTrue(resultado);
         }
 
         [Test]
-        public void PagarCon_ExcedeLimiteNegativo_DevuelveNull()
+        public void PuedeUsarseAhora_FueraDeHorario_DeberiaSerFalse()
         {
-            // Con saldo 0 y limite -1200, solo puede hacer 1 viaje (790)
-            // El segundo dejaria el saldo en -1580, que excede el limite
-            Boleto b1 = colectivo.PagarCon(tarjeta);
-            Boleto b2 = colectivo.PagarCon(tarjeta);
+            var fueraHorario = new DateTime(2024, 11, 20, 23, 0, 0);
+            bool resultado = tarjeta.PuedeUsarseAhora(fueraHorario);
 
-            Assert.IsNotNull(b1);
-            Assert.IsNull(b2); // Este deberia fallar porque -1580 < -1200
+            Assert.IsFalse(resultado);
         }
 
         [Test]
-        public void MedioBoleto_ConColectivoInterurbano_CobraMitadDe3000()
+        public void PuedeUsarseAhora_FinDeSemana_DeberiaSerFalse()
         {
-            Colectivo interurbano = new Colectivo("Gálvez", true);
-            tarjeta.CargarSaldo(5000);
+            var sabado = new DateTime(2024, 11, 23, 10, 0, 0);
+            bool resultado = tarjeta.PuedeUsarseAhora(sabado);
 
-            Boleto boleto = interurbano.PagarCon(tarjeta);
-
-            Assert.IsNotNull(boleto);
-            Assert.AreEqual(1500, boleto.ImportePagado); // mitad de 3000
-            Assert.AreEqual(3500, tarjeta.ObtenerSaldo());
+            Assert.IsFalse(resultado);
         }
     }
 }

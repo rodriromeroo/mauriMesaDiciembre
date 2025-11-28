@@ -9,19 +9,25 @@ namespace TarjetaSube
         public decimal SaldoRestante { get; private set; }
         public DateTime FechaHora { get; private set; }
         public bool EsTransbordo { get; private set; }
+        public long TarjetaId { get; private set; }
+        public string TipoTarjeta { get; private set; }
 
-        public Boleto(string linea, decimal importe, decimal saldo)
-            : this(linea, importe, saldo, false)
-        {
-        }
-
-        public Boleto(string linea, decimal importe, decimal saldo, bool esTransbordo)
+        public Boleto(string linea, decimal importe, Tarjeta tarjeta, bool esTransbordo = false)
         {
             LineaColectivo = linea;
             ImportePagado = importe;
-            SaldoRestante = saldo;
+            SaldoRestante = tarjeta.ObtenerSaldo();
             FechaHora = DateTime.Now;
             EsTransbordo = esTransbordo;
+            TarjetaId = tarjeta.ObtenerId();
+
+            TipoTarjeta = tarjeta switch
+            {
+                TarjetaMedioBoleto => "Medio Boleto Estudiantil",
+                TarjetaBoletoGratuito => "Boleto Educativo Gratuito",
+                TarjetaFranquiciaCompleta => "Franquicia Completa",
+                _ => "Tarjeta Normal"
+            };
         }
 
         public void MostrarInformacion()
@@ -29,15 +35,14 @@ namespace TarjetaSube
             Console.WriteLine("================================");
             Console.WriteLine("      BOLETO DE COLECTIVO      ");
             Console.WriteLine("================================");
-            Console.WriteLine("Línea: " + LineaColectivo);
-            Console.WriteLine("Fecha: " + FechaHora.ToString("dd/MM/yyyy"));
-            Console.WriteLine("Hora: " + FechaHora.ToString("HH:mm:ss"));
-            Console.WriteLine("Importe pagado: $" + ImportePagado);
-            Console.WriteLine("Saldo restante: $" + SaldoRestante);
-            if (EsTransbordo)
-            {
-                Console.WriteLine("*** TRASBORDO ***");
-            }
+            Console.WriteLine($"Línea: {LineaColectivo}");
+            Console.WriteLine($"Tarjeta ID: {TarjetaId}");
+            Console.WriteLine($"Tipo: {TipoTarjeta}");
+            Console.WriteLine($"Fecha: {FechaHora:dd/MM/yyyy HH:mm}");
+            Console.WriteLine($"Importe: ${ImportePagado:N0}");
+            Console.WriteLine($"Saldo: ${SaldoRestante:N0}");
+            if (EsTransbordo) Console.WriteLine("*** TRASBORDO GRATUITO ***");
+            if (ImportePagado == 0 && !EsTransbordo) Console.WriteLine("*** VIAJE GRATUITO ***");
             Console.WriteLine("================================");
         }
     }

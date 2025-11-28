@@ -6,112 +6,72 @@ namespace TarjetaSube
     public class Tarjeta
     {
         protected decimal saldo;
-        private List<decimal> montosPermitidos;
+        private decimal saldoPendiente;
         private const decimal LIMITE_NEGATIVO = -1200m;
         private const decimal LIMITE_MAXIMO = 56000m;
-        private decimal saldoPendiente;
+        private readonly List<decimal> montosPermitidos = new()
+        {
+            2000,
+            3000,
+            4000,
+            5000,
+            8000,
+            10000,
+            15000,
+            20000,
+            25000,
+            30000
+        };
 
-        // para boleto de uso frecuente
-        private int viajesDelMes;
-        private DateTime ultimoMesRegistrado;
+        private readonly long id;
+        private static long contadorId = 1000000;
+        public long Id => id;
 
-        private DateTime ultimoViajeParaTrasbordo;
-        private string ultimaLineaViajada;
+        protected int viajesDelMes;
+        protected DateTime ultimoMesRegistrado;
+
+        protected DateTime ultimoViajeFechaHora = DateTime.MinValue;
+        protected string ultimaLineaViajada = "";
 
         public Tarjeta()
         {
+            id = ++contadorId;
             saldo = 0;
             saldoPendiente = 0;
-            montosPermitidos = new List<decimal> {
-                2000, 3000, 4000, 5000, 8000, 10000, 15000, 20000, 25000, 30000
-            };
             viajesDelMes = 0;
             ultimoMesRegistrado = DateTime.Now;
-            ultimoViajeParaTrasbordo = DateTime.MinValue;
-            ultimaLineaViajada = "";
-        }
-public void RegistrarViajeParaTrasbordo(string lineaColectivo, DateTime fechaHora)
-{
-    ultimaLineaViajada = lineaColectivo;
-}
-
-public bool PuedeHacerTrasbordo(string lineaColectivo, DateTime fechaHora)
-{
-    return false;
-}
-        public decimal ObtenerSaldo()
-        {
-            return saldo;
         }
 
-        public decimal ObtenerSaldoPendiente()
-        {
-            return saldoPendiente;
-        }
+        public decimal ObtenerSaldo() => saldo;
+        public decimal ObtenerSaldoPendiente() => saldoPendiente;
+        public long ObtenerId() => id;
 
-        public int ObtenerViajesDelMes()
+        public decimal CalcularDescuentoUsoFrecuente(decimal montoBase, DateTime fechaHora)
         {
-            DateTime ahora = DateTime.Now;
-
-            // Si cambió el mes, reiniciar contador
-            if (ahora.Month != ultimoMesRegistrado.Month || ahora.Year != ultimoMesRegistrado.Year)
+            if (fechaHora.Month != ultimoMesRegistrado.Month || fechaHora.Year != ultimoMesRegistrado.Year)
             {
                 viajesDelMes = 0;
-                ultimoMesRegistrado = ahora;
+                ultimoMesRegistrado = fechaHora;
             }
 
-
-            return viajesDelMes;
-        }
-
-        public decimal CalcularDescuentoUsoFrecuente(decimal montoBase)
-        {
-            DateTime ahora = DateTime.Now;
-
-            // Verificar si cambió el mes
-            if (ahora.Month != ultimoMesRegistrado.Month || ahora.Year != ultimoMesRegistrado.Year)
-            {
-                viajesDelMes = 0;
-                ultimoMesRegistrado = ahora;
-            }
-
-            // Incrementar contador de viajes
             viajesDelMes++;
 
-            // Aplicar descuentos según cantidad de viajes
-            if (viajesDelMes >= 1 && viajesDelMes <= 29)
-            {
-                return montoBase; // Tarifa normal
-            }
-            else if (viajesDelMes >= 30 && viajesDelMes <= 59)
-            {
-                return montoBase * 0.80m; // 20% descuento
-            }
-            else if (viajesDelMes >= 60 && viajesDelMes <= 80)
-            {
-                return montoBase * 0.75m; // 25% descuento
-            }
-            else // viaje 81 en adelante
-            {
-                return montoBase; // Tarifa normal
-            }
+            if (viajesDelMes <= 29) return montoBase;
+            if (viajesDelMes <= 59) return montoBase * 0.80m;
+            if (viajesDelMes <= 80) return montoBase * 0.75m;
+            return montoBase;
         }
 
-        /// carga saldo monto permitido y carga max de 56k, si el saldo es negativo se paga la deuda
+        public virtual decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => CalcularDescuentoUsoFrecuente(monto, fechaHora);
+
+        public virtual decimal ObtenerMontoAPagar(decimal tarifaBase, DateTime fechaHora) => tarifaBase;
+        public virtual bool PuedeUsarseAhora(DateTime fechaHora) => true;
+        public virtual void RegistrarViaje(DateTime fechaHora) { }
+
         public bool CargarSaldo(decimal monto)
         {
-            if (!montosPermitidos.Contains(monto))
-            {
-                return false;
-            }
-
-            if (saldoPendiente > 0)
-            {
-                AcreditarCarga();
-            }
-
+            if (!montosPermitidos.Contains(monto)) return false;
             decimal nuevoSaldo = saldo + monto;
-
             if (nuevoSaldo > LIMITE_MAXIMO)
             {
                 decimal excedente = nuevoSaldo - LIMITE_MAXIMO;
@@ -119,47 +79,41 @@ public bool PuedeHacerTrasbordo(string lineaColectivo, DateTime fechaHora)
                 saldoPendiente += excedente;
                 return true;
             }
-
             saldo = nuevoSaldo;
             return true;
         }
 
         public void AcreditarCarga()
         {
-            if (saldoPendiente > 0)
-            {
-                decimal espacioDisponible = LIMITE_MAXIMO - saldo;
-
-                if (espacioDisponible > 0)
-                {
-                    if (saldoPendiente <= espacioDisponible)
-                    {
-                        saldo += saldoPendiente;
-                        saldoPendiente = 0;
-                    }
-                    else
-                    {
-                        saldo += espacioDisponible;
-                        saldoPendiente -= espacioDisponible;
-                    }
-                }
-            }
+            if (saldoPendiente <= 0) return;
+            decimal espacio = LIMITE_MAXIMO - saldo;
+            if (espacio <= 0) return;
+            decimal aAcreditar = Math.Min(saldoPendiente, espacio);
+            saldo += aAcreditar;
+            saldoPendiente -= aAcreditar;
         }
+
         public virtual bool DescontarSaldo(decimal monto)
         {
-            decimal saldoResultado = saldo - monto;
+            if (saldo - monto < LIMITE_NEGATIVO) return false;
+            saldo -= monto;
+            if (saldoPendiente > 0) AcreditarCarga();
+            return true;
+        }
 
-            if (saldoResultado < LIMITE_NEGATIVO)
-            {
-                return false;
-            }
+        public void RegistrarUltimoViaje(string linea, DateTime cuando)
+        {
+            ultimaLineaViajada = linea;
+            ultimoViajeFechaHora = cuando;
+        }
 
-            saldo = saldoResultado;
-
-            if (saldoPendiente > 0)
-            {
-                AcreditarCarga();
-            }
+        public virtual bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
+        {
+            if (ultimoViajeFechaHora == DateTime.MinValue) return false;
+            if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+            if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
+            if (ahora.DayOfWeek == DayOfWeek.Sunday) return false;
+            if (ahora.Hour < 7 || ahora.Hour >= 22) return false;
 
             return true;
         }

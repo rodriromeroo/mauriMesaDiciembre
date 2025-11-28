@@ -4,96 +4,46 @@ namespace TarjetaSube
 {
     public class TarjetaBoletoGratuito : Tarjeta
     {
-        private int viajesGratuitosHoy;
-        private DateTime ultimaFechaViaje;
-        private const int MAX_VIAJES_GRATUITOS_DIA = 2;
+        private int viajesGratuitosHoy = 0;
+        private DateTime ultimaFechaViaje = DateTime.MinValue;
 
-        public TarjetaBoletoGratuito() : base()
+        public override decimal ObtenerMontoAPagar(decimal monto, DateTime fechaHora)
         {
-            viajesGratuitosHoy = 0;
-            ultimaFechaViaje = DateTime.MinValue;
-        }
-
-        public decimal CalcularDescuento(decimal monto)
-        {
-            DateTime hoy = DateTime.Now.Date;
-
-            // Resetear contador si es un nuevo día
-            if (ultimaFechaViaje.Date != hoy)
-            {
+            if (ultimaFechaViaje.Date != fechaHora.Date)
                 viajesGratuitosHoy = 0;
-            }
 
-            // Si ya usó los 2 viajes gratuitos del día, cobra precio completo
-            if (viajesGratuitosHoy >= MAX_VIAJES_GRATUITOS_DIA)
-            {
+            if (viajesGratuitosHoy < 2)
+                return 0m;
+            else
                 return monto;
-            }
-
-            // Viaje gratuito
-            return 0;
         }
 
-        public bool PuedeViajarGratis()
+        public override bool PuedeUsarseAhora(DateTime fechaHora)
         {
-            DateTime hoy = DateTime.Now.Date;
-
-            if (ultimaFechaViaje.Date != hoy)
-            {
-                viajesGratuitosHoy = 0;
-            }
-
-            return viajesGratuitosHoy < MAX_VIAJES_GRATUITOS_DIA;
-        }
-
-        public bool PuedeViajarEnEsteHorario()
-        {
-            DateTime ahora = DateTime.Now;
-            
-            // Verifica si es lunes a viernes
-            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
-            {
+            if (fechaHora.DayOfWeek == DayOfWeek.Saturday || fechaHora.DayOfWeek == DayOfWeek.Sunday)
                 return false;
-            }
-            
-            // Verifica si está entre las 6 y las 22
-            if (ahora.Hour < 6 || ahora.Hour >= 22)
-            {
+            if (fechaHora.Hour < 6 || fechaHora.Hour >= 22)
                 return false;
-            }
-            
             return true;
         }
 
-        public void RegistrarViaje()
+        public override void RegistrarViaje(DateTime fechaHora)
         {
-            DateTime hoy = DateTime.Now.Date;
-
-            // Resetear contador si es un nuevo día
-            if (ultimaFechaViaje.Date != hoy)
-            {
+            if (ultimaFechaViaje.Date != fechaHora.Date)
                 viajesGratuitosHoy = 0;
-            }
-
             viajesGratuitosHoy++;
-            ultimaFechaViaje = DateTime.Now;
+            ultimaFechaViaje = fechaHora;
         }
 
-        public void RegistrarViajeGratuito()
+        public override bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
         {
-            RegistrarViaje();
+            if (ultimoViajeFechaHora == DateTime.MinValue) return false;
+            if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+            if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
+
+            return PuedeUsarseAhora(ahora);
         }
 
-        public int ObtenerViajesGratuitosHoy()
-        {
-            DateTime hoy = DateTime.Now.Date;
-
-            if (ultimaFechaViaje.Date != hoy)
-            {
-                return 0;
-            }
-
-            return viajesGratuitosHoy;
-        }
+        public override decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => monto;
     }
 }

@@ -4,38 +4,52 @@ namespace TarjetaSube
 {
     public class TarjetaMedioBoleto : Tarjeta
     {
-        public TarjetaMedioBoleto() : base()
+        private DateTime ultimoViaje = DateTime.MinValue;
+        private int viajesConDescuentoHoy = 0;
+        private DateTime fechaUltimoDescuento = DateTime.Today;
+
+        public override decimal ObtenerMontoAPagar(decimal tarifaBase, DateTime fechaHora)
         {
+            if (fechaHora.Date != fechaUltimoDescuento.Date)
+            {
+                viajesConDescuentoHoy = 0;
+                fechaUltimoDescuento = fechaHora.Date;
+            }
+
+            if (ultimoViaje != DateTime.MinValue && (fechaHora - ultimoViaje).TotalMinutes < 5)
+                return -1m;
+
+            if (viajesConDescuentoHoy < 2)
+            {
+                viajesConDescuentoHoy++;
+                ultimoViaje = fechaHora;
+                return tarifaBase / 2;
+            }
+            else
+            {
+                ultimoViaje = fechaHora;
+                return tarifaBase;
+            }
         }
 
-        public decimal CalcularDescuento(decimal monto)
+        public override bool PuedeUsarseAhora(DateTime fechaHora)
         {
-            return monto / 2;
-        }
-
-        public bool PuedeViajarEnEsteHorario()
-        {
-            DateTime ahora = DateTime.Now;
-            
-            // verifica si es lunes a viernes
-            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
-            {
+            if (fechaHora.DayOfWeek == DayOfWeek.Saturday || fechaHora.DayOfWeek == DayOfWeek.Sunday)
                 return false;
-            }
-            
-            // verifica si esta entre las 6 y las 22
-            if (ahora.Hour < 6 || ahora.Hour >= 22)
-            {
+            if (fechaHora.Hour < 6 || fechaHora.Hour >= 22)
                 return false;
-            }
-            
             return true;
         }
 
-        public override bool DescontarSaldo(decimal monto)
+        public override bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
         {
-            bool resultado = base.DescontarSaldo(monto);
-            return resultado;
+            if (ultimoViajeFechaHora == DateTime.MinValue) return false;
+            if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+            if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
+
+            return PuedeUsarseAhora(ahora);
         }
+
+        public override decimal AplicarDescuentoUsoFrecuente(decimal monto, DateTime fechaHora) => monto;
     }
 }
