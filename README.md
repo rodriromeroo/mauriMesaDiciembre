@@ -1,8 +1,7 @@
 [![codecov](https://codecov.io/github/rodriromeroo/mauriTarjeta/graph/badge.svg?token=I3NHORRPEJ)](https://codecov.io/github/rodriromeroo/mauriTarjeta)
 
-Por comodidad, dejaremos el readme así y añadiremos acá como se llevan a paso las iteraciones!! 
-Iteraciones hechas: 1, 2 (total)
-Restantes: 3, 4 (totales)
+ITERACIÓN 1, 2, 3, 4 Y 5 COMPLETADAS!
+(que conste que la badge es vieja)
 
 # Trabajo Tarjeta 2025
 
