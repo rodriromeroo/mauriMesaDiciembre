@@ -135,12 +135,14 @@ namespace TarjetaSube.Tests
         [Test]
         public void RetirarConSaldoNegativoPermitido()
         {
-            tarjeta.CargarSaldo(2000);
+            tarjeta.CargarSaldo(3000);
+            estacion.RetirarBicicleta(tarjeta);
+            estacion.DevolverBicicleta(tarjeta);
 
             bool resultado = estacion.RetirarBicicleta(tarjeta);
 
             Assert.IsTrue(resultado);
-            Assert.AreEqual(222.50m, tarjeta.ObtenerSaldo());
+            Assert.AreEqual(-555m, tarjeta.ObtenerSaldo());
         }
 
         [Test]
