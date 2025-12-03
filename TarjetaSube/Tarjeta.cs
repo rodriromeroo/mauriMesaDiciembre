@@ -107,13 +107,20 @@ namespace TarjetaSube
             ultimoViajeFechaHora = cuando;
         }
 
-        public virtual bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
+        public bool EsTrasbordoValido(string nuevaLinea, DateTime ahora)
         {
             if (ultimoViajeFechaHora == DateTime.MinValue) return false;
             if (string.Equals(ultimaLineaViajada.Trim(), nuevaLinea.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
             if ((ahora - ultimoViajeFechaHora).TotalMinutes > 60) return false;
-            if (ahora.DayOfWeek == DayOfWeek.Sunday) return false;
-            if (ahora.Hour < 7 || ahora.Hour >= 22) return false;
+            if (this is Tarjeta && this.GetType() == typeof(Tarjeta))
+            {
+                if (ahora.DayOfWeek == DayOfWeek.Sunday) return false;
+                if (ahora.Hour < 7 || ahora.Hour >= 22) return false;
+            }
+            else
+            {
+                if (!PuedeUsarseAhora(ahora)) return false;
+            }
 
             return true;
         }

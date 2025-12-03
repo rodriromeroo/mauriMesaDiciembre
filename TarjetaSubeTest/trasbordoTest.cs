@@ -260,19 +260,23 @@ namespace TarjetaSube.Tests
         }
 
         [Test]
-        public void MedioBoleto_FuncionaConSaldoNegativo()
+        public void MedioBoleto_TrasbordoConSaldoNegativo()
         {
             var medio = new TarjetaMedioBoleto();
             medio.CargarSaldo(2000);
             medio.DescontarSaldo(1500);
-            var colectivo = new Colectivo("120");
-            DateTime viaje = new DateTime(2024, 11, 15, 10, 0, 0);
-
-            Boleto boleto = colectivo.PagarCon(medio, viaje);
-
-            Assert.IsNotNull(boleto);
-            Assert.AreEqual(790m, boleto.ImportePagado);
-            Assert.IsTrue(medio.ObtenerSaldo() < 0);
+            var colectivo1 = new Colectivo("120");
+            var colectivo2 = new Colectivo("133");
+            DateTime viaje1 = new DateTime(2024, 11, 15, 10, 0, 0);
+            DateTime viaje2 = new DateTime(2024, 11, 15, 10, 30, 0);
+            Boleto boleto1 = colectivo1.PagarCon(medio, viaje1);
+            Assert.AreEqual(790m, boleto1.ImportePagado);
+            Assert.IsTrue(medio.ObtenerSaldo() < 0); 
+            Boleto boleto2 = colectivo2.PagarCon(medio, viaje2);
+            Assert.IsNotNull(boleto2);
+            Assert.IsTrue(boleto2.EsTransbordo);
+            Assert.AreEqual(0m, boleto2.ImportePagado);
+            Assert.AreEqual(-290m, medio.ObtenerSaldo()); 
         }
 
         [Test]
